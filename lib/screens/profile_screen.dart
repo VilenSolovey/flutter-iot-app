@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
-import '../widgets/section_header.dart';
-import '../widgets/stat_card.dart';
-import '../widgets/workout_card.dart';
-import '../widgets/primary_button.dart';
+import 'package:my_project/theme/app_theme.dart';
+import 'package:my_project/widgets/primary_button.dart';
+import 'package:my_project/widgets/section_header.dart';
+import 'package:my_project/widgets/stat_card.dart';
+import 'package:my_project/widgets/workout_card.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -48,7 +48,10 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
                 const _ConnectedDeviceCard(),
                 const SizedBox(height: AppSpacing.xl),
-                SectionHeader(title: 'Recent Activity', action: 'History'),
+                const SectionHeader(
+                  title: 'Recent Activity',
+                  action: 'History',
+                ),
                 const SizedBox(height: AppSpacing.md),
                 const _RecentWorkouts(),
                 const SizedBox(height: AppSpacing.xl),
@@ -101,7 +104,7 @@ class _ProfileHeader extends StatelessWidget {
             children: [
               const Text('Vilen', style: AppText.h2),
               const SizedBox(height: AppSpacing.xs),
-              Text('vilen@gmail.com', style: AppText.muted),
+              const Text('vilen@gmail.com', style: AppText.muted),
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
@@ -135,8 +138,8 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: const [
+    return const Row(
+      children: [
         StatCard(value: '99%', label: 'UPTIME'),
         SizedBox(width: AppSpacing.sm),
         StatCard(value: '3', label: 'DEVICES'),
@@ -234,15 +237,15 @@ class _ConnectedDeviceCard extends StatelessWidget {
               ],
             ),
           ),
-          Column(
+          const Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Icon(
+              Icon(
                 Icons.battery_charging_full,
                 color: AppColors.accent,
                 size: 24,
               ),
-              const SizedBox(height: AppSpacing.xs),
+              SizedBox(height: AppSpacing.xs),
               Text(
                 '85%',
                 style: AppText.muted,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
-import '../widgets/section_header.dart';
-import '../widgets/iot_metric_card.dart';
+import 'package:my_project/theme/app_theme.dart';
+import 'package:my_project/widgets/iot_metric_card.dart';
+import 'package:my_project/widgets/section_header.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -55,18 +55,18 @@ class _AppBar extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
+            const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Good morning,', style: AppText.muted),
-                const Text('Vilen', style: AppText.h2),
+                Text('Vilen', style: AppText.h2),
               ],
             ),
             GestureDetector(
               onTap: () => Navigator.pushNamed(context, '/profile'),
-              child: Hero(
+              child: const Hero(
                 tag: 'profile-avatar',
-                child: const CircleAvatar(
+                child: CircleAvatar(
                   radius: 22,
                   backgroundColor: AppColors.card,
                   child:
@@ -101,7 +101,6 @@ class _IotMetricsGrid extends StatelessWidget {
           unit: 'bpm',
           color: Color(0xFFE91E63),
           isPulsing: true,
-          delay: Duration(milliseconds: 0),
         ),
         IotMetricCard(
           icon: Icons.thermostat,
@@ -190,7 +189,7 @@ class _DeviceStatusCard extends StatelessWidget {
               ],
             ),
           ),
-          Text(
+          const Text(
             'Battery: 85%',
             style: AppText.muted,
           ),

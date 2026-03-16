@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:my_project/theme/app_theme.dart';
 
 class WorkoutCard extends StatelessWidget {
   const WorkoutCard({
-    super.key,
     required this.title,
     required this.category,
     required this.duration,
     required this.calories,
+    super.key,
     this.isFeatured = false,
     this.fullWidth = false,
   });

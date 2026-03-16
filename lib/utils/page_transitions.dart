@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class SmoothPageRoute extends PageRouteBuilder {
+class SmoothPageRoute extends PageRouteBuilder<void> {
   final Widget page;
 
   SmoothPageRoute({required this.page})
@@ -9,14 +9,14 @@ class SmoothPageRoute extends PageRouteBuilder {
           transitionDuration: const Duration(milliseconds: 400),
           reverseTransitionDuration: const Duration(milliseconds: 400),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0);
+            const begin = Offset(1, 0);
             const end = Offset.zero;
             const curve = Curves.easeInOutCubic;
 
-            var slideTween =
+            final slideTween =
                 Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            var fadeTween = Tween<double>(begin: 0.0, end: 1.0)
-                .chain(CurveTween(curve: curve));
+            final fadeTween =
+                Tween<double>(begin: 0, end: 1).chain(CurveTween(curve: curve));
 
             return SlideTransition(
               position: animation.drive(slideTween),
@@ -29,7 +29,7 @@ class SmoothPageRoute extends PageRouteBuilder {
         );
 }
 
-class FadePageRoute extends PageRouteBuilder {
+class FadePageRoute extends PageRouteBuilder<void> {
   final Widget page;
 
   FadePageRoute({required this.page})
@@ -49,7 +49,7 @@ class FadePageRoute extends PageRouteBuilder {
         );
 }
 
-class ScalePageRoute extends PageRouteBuilder {
+class ScalePageRoute extends PageRouteBuilder<void> {
   final Widget page;
 
   ScalePageRoute({required this.page})
@@ -58,7 +58,7 @@ class ScalePageRoute extends PageRouteBuilder {
           transitionDuration: const Duration(milliseconds: 300),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return ScaleTransition(
-              scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+              scale: Tween<double>(begin: 0.8, end: 1).animate(
                 CurvedAnimation(
                   parent: animation,
                   curve: Curves.easeOutCubic,

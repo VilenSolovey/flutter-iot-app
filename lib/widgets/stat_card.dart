@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:my_project/theme/app_theme.dart';
 
 class StatCard extends StatelessWidget {
   const StatCard({
-    super.key,
     required this.value,
     required this.label,
+    super.key,
   });
 
   final String value;

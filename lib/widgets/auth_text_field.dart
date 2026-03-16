@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:my_project/theme/app_theme.dart';
 
 class AuthTextField extends StatelessWidget {
   const AuthTextField({
-    super.key,
     required this.label,
+    super.key,
     this.hint = '',
     this.isPassword = false,
     this.keyboardType,

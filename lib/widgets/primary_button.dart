@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:my_project/theme/app_theme.dart';
 
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
-    super.key,
     required this.label,
     required this.onPressed,
+    super.key,
     this.isOutlined = false,
   });
 
@@ -23,36 +23,36 @@ class PrimaryButton extends StatelessWidget {
   }
 
   Widget _filled() => ElevatedButton(
-    onPressed: onPressed,
-    style: ElevatedButton.styleFrom(
-      backgroundColor: AppColors.accent,
-      foregroundColor: AppColors.bg,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
-    ),
-    child: Text(
-      label,
-      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-    ),
-  );
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.accent,
+          foregroundColor: AppColors.bg,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        ),
+      );
 
   Widget _outlined() => OutlinedButton(
-    onPressed: onPressed,
-    style: OutlinedButton.styleFrom(
-      side: const BorderSide(color: AppColors.border, width: 1.5),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
-    ),
-    child: Text(
-      label,
-      style: const TextStyle(
-        color: AppColors.primary,
-        fontWeight: FontWeight.w600,
-        fontSize: 15,
-      ),
-    ),
-  );
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: AppColors.border, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
+        ),
+      );
 }

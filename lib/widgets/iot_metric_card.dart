@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:my_project/theme/app_theme.dart';
 
 class IotMetricCard extends StatelessWidget {
   const IotMetricCard({
-    super.key,
     required this.icon,
     required this.label,
     required this.value,
     required this.unit,
+    super.key,
     this.color,
     this.isPulsing = false,
     this.delay = Duration.zero,
@@ -23,14 +23,14 @@ class IotMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: Future.delayed(delay),
+    return FutureBuilder<void>(
+      future: Future<void>.delayed(delay),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const SizedBox.shrink();
         }
         return TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.0, end: 1.0),
+          tween: Tween(begin: 0, end: 1),
           duration: const Duration(milliseconds: 500),
           curve: Curves.easeOutCubic,
           builder: (context, value, child) {
@@ -53,14 +53,17 @@ class IotMetricCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    isPulsing
-                        ? _PulsingIcon(
-                            icon: icon, color: color ?? AppColors.accent)
-                        : Icon(
-                            icon,
-                            color: color ?? AppColors.accent,
-                            size: 24,
-                          ),
+                    if (isPulsing)
+                      _PulsingIcon(
+                        icon: icon,
+                        color: color ?? AppColors.accent,
+                      )
+                    else
+                      Icon(
+                        icon,
+                        color: color ?? AppColors.accent,
+                        size: 24,
+                      ),
                     const SizedBox(width: AppSpacing.xs),
                     Expanded(
                       child: Text(

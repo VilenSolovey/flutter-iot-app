@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:my_project/theme/app_theme.dart';
 
 class SectionHeader extends StatelessWidget {
   const SectionHeader({
-    super.key,
     required this.title,
+    super.key,
     this.action,
     this.onAction,
   });
@@ -17,7 +17,6 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(title, style: AppText.h2),
         if (action != null)

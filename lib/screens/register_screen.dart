@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
-import '../widgets/app_logo.dart';
-import '../widgets/auth_text_field.dart';
-import '../widgets/primary_button.dart';
+import 'package:my_project/theme/app_theme.dart';
+import 'package:my_project/widgets/app_logo.dart';
+import 'package:my_project/widgets/auth_text_field.dart';
+import 'package:my_project/widgets/primary_button.dart';
 
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({super.key});

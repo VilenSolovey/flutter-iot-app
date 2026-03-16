@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:my_project/screens/home_screen.dart';
+import 'package:my_project/screens/login_screen.dart';
+import 'package:my_project/screens/profile_screen.dart';
+import 'package:my_project/screens/register_screen.dart';
 import 'package:my_project/theme/app_theme.dart';
-import 'screens/login_screen.dart';
-import 'screens/register_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/profile_screen.dart';
 
 void main() {
   runApp(const MyApp());
