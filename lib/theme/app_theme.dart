@@ -53,11 +53,11 @@ abstract final class AppText {
 
 abstract final class AppTheme {
   static ThemeData get dark => ThemeData(
-    brightness: Brightness.dark,
-    scaffoldBackgroundColor: AppColors.bg,
-    colorScheme: const ColorScheme.dark(
-      primary: AppColors.accent,
-      surface: AppColors.surface,
-    ),
-  );
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: AppColors.bg,
+        colorScheme: const ColorScheme.dark(
+          primary: AppColors.accent,
+          surface: AppColors.surface,
+        ),
+      );
 }
