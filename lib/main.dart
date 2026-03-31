@@ -1,16 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:my_project/app/app_dependencies.dart';
 import 'package:my_project/screens/home_screen.dart';
 import 'package:my_project/screens/login_screen.dart';
 import 'package:my_project/screens/profile_screen.dart';
 import 'package:my_project/screens/register_screen.dart';
 import 'package:my_project/theme/app_theme.dart';
 
-void main() {
-  runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final dependencies = await AppDependencies.create();
+  final hasSession = await dependencies.authService.hasActiveSession();
+
+  runApp(
+    MyApp(
+      dependencies: dependencies,
+      initialRoute: hasSession ? '/home' : '/login',
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({
+    required this.dependencies,
+    required this.initialRoute,
+    super.key,
+  });
+
+  final AppDependencies dependencies;
+  final String initialRoute;
 
   @override
   Widget build(BuildContext context) {
@@ -19,12 +36,22 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.dark,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.dark,
-      initialRoute: '/login',
+      initialRoute: initialRoute,
       routes: {
-        '/login': (_) => const LoginScreen(),
-        '/register': (_) => const RegisterScreen(),
-        '/home': (_) => const HomeScreen(),
-        '/profile': (_) => const ProfileScreen(),
+        '/login': (_) => LoginScreen(
+              authService: dependencies.authService,
+            ),
+        '/register': (_) => RegisterScreen(
+              authService: dependencies.authService,
+            ),
+        '/home': (_) => HomeScreen(
+              authService: dependencies.authService,
+              healthRecordService: dependencies.healthRecordService,
+            ),
+        '/profile': (_) => ProfileScreen(
+              authService: dependencies.authService,
+              healthRecordService: dependencies.healthRecordService,
+            ),
       },
     );
   }
