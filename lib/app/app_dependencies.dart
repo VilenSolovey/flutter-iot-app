@@ -1,8 +1,8 @@
-import 'package:my_project/services/auth_service.dart';
-import 'package:my_project/services/health_record_service.dart';
 import 'package:my_project/data/repositories/local_auth_repository.dart';
 import 'package:my_project/data/repositories/local_health_record_repository.dart';
 import 'package:my_project/data/storage/shared_prefs_storage.dart';
+import 'package:my_project/services/auth_service.dart';
+import 'package:my_project/services/health_record_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppDependencies {

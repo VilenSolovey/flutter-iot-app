@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:my_project/domain/models/user_profile.dart';
 import 'package:my_project/services/auth_service.dart';
 import 'package:my_project/services/health_record_service.dart';
-import 'package:my_project/domain/models/user_profile.dart';
 import 'package:my_project/theme/app_theme.dart';
 import 'package:my_project/widgets/auth_text_field.dart';
 import 'package:my_project/widgets/primary_button.dart';
