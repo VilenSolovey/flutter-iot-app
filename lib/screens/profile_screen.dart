@@ -1,15 +1,168 @@
 import 'package:flutter/material.dart';
+import 'package:my_project/domain/models/user_profile.dart';
+import 'package:my_project/services/auth_service.dart';
+import 'package:my_project/services/health_record_service.dart';
 import 'package:my_project/theme/app_theme.dart';
+import 'package:my_project/widgets/auth_text_field.dart';
 import 'package:my_project/widgets/primary_button.dart';
 import 'package:my_project/widgets/section_header.dart';
 import 'package:my_project/widgets/stat_card.dart';
-import 'package:my_project/widgets/workout_card.dart';
 
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({
+    required this.authService,
+    required this.healthRecordService,
+    super.key,
+  });
+
+  final AuthService authService;
+  final HealthRecordService healthRecordService;
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+
+  UserProfile? _user;
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUser() async {
+    final user = await widget.authService.getActiveUser();
+    if (!mounted) {
+      return;
+    }
+    if (user == null) {
+      Navigator.pushReplacementNamed(context, '/login');
+      return;
+    }
+
+    setState(() {
+      _user = user;
+      _nameController.text = user.fullName;
+      _emailController.text = user.email;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _saveProfile() async {
+    final user = _user;
+    if (user == null) {
+      return;
+    }
+
+    final isValid = _formKey.currentState?.validate() ?? false;
+    if (!isValid) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    final result = await widget.authService.updateProfile(
+      oldUser: user,
+      fullName: _nameController.text,
+      email: _emailController.text,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = false;
+      _user = result.user ?? _user;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.message ?? 'Помилка оновлення профілю'),
+      ),
+    );
+  }
+
+  Future<void> _logout() async {
+    await widget.authService.logout();
+    if (!mounted) {
+      return;
+    }
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  }
+
+  Future<void> _deleteAccount() async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Delete account', style: AppText.h2),
+        content: const Text(
+          'Видалити користувача і всі локальні записи?',
+          style: AppText.body,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) {
+      return;
+    }
+
+    await widget.authService.deleteUser();
+    await widget.healthRecordService.clearAllRecords();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final user = _user;
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: Text('No profile data')),
+      );
+    }
+
+    final avatarText = user.fullName.isNotEmpty
+        ? user.fullName.substring(0, 1).toUpperCase()
+        : 'U';
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.bg,
@@ -19,13 +172,6 @@ class ProfileScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('Profile', style: AppText.h2),
-        actions: [
-          IconButton(
-            icon:
-                const Icon(Icons.settings_outlined, color: AppColors.secondary),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -37,31 +183,59 @@ class ProfileScreen extends StatelessWidget {
               horizontal: hPad,
               vertical: AppSpacing.md,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _ProfileHeader(),
-                const SizedBox(height: AppSpacing.xl),
-                const _StatsRow(),
-                const SizedBox(height: AppSpacing.xl),
-                const SectionHeader(title: 'Connected Device'),
-                const SizedBox(height: AppSpacing.md),
-                const _ConnectedDeviceCard(),
-                const SizedBox(height: AppSpacing.xl),
-                const SectionHeader(
-                  title: 'Recent Activity',
-                  action: 'History',
-                ),
-                const SizedBox(height: AppSpacing.md),
-                const _RecentWorkouts(),
-                const SizedBox(height: AppSpacing.xl),
-                PrimaryButton(
-                  label: 'Logout',
-                  isOutlined: true,
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/'),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-              ],
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ProfileHeader(
+                    fullName: user.fullName,
+                    email: user.email,
+                    avatarText: avatarText,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  const _StatsRow(),
+                  const SizedBox(height: AppSpacing.xl),
+                  const SectionHeader(title: 'Edit Profile'),
+                  const SizedBox(height: AppSpacing.md),
+                  AuthTextField(
+                    label: 'Full Name',
+                    hint: 'John Doe',
+                    controller: _nameController,
+                    textInputAction: TextInputAction.next,
+                    validator: (value) =>
+                        widget.authService.validateFullName(value ?? ''),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AuthTextField(
+                    label: 'Email',
+                    hint: 'you@example.com',
+                    keyboardType: TextInputType.emailAddress,
+                    controller: _emailController,
+                    textInputAction: TextInputAction.done,
+                    validator: (value) =>
+                        widget.authService.validateEmail(value ?? ''),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  PrimaryButton(
+                    label: _isSaving ? 'Saving...' : 'Save Changes',
+                    onPressed: _isSaving ? null : _saveProfile,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  PrimaryButton(
+                    label: 'Logout',
+                    isOutlined: true,
+                    onPressed: _logout,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  PrimaryButton(
+                    label: 'Delete Account',
+                    isOutlined: true,
+                    onPressed: _deleteAccount,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
+              ),
             ),
           );
         },
@@ -71,6 +245,16 @@ class ProfileScreen extends StatelessWidget {
 }
 
 class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({
+    required this.fullName,
+    required this.email,
+    required this.avatarText,
+  });
+
+  final String fullName;
+  final String email;
+  final String avatarText;
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -85,10 +269,10 @@ class _ProfileHeader extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.accent, width: 2),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'A',
-                style: TextStyle(
+                avatarText,
+                style: const TextStyle(
                   color: AppColors.accent,
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
@@ -102,29 +286,9 @@ class _ProfileHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Vilen', style: AppText.h2),
+              Text(fullName, style: AppText.h2),
               const SizedBox(height: AppSpacing.xs),
-              const Text('vilen@gmail.com', style: AppText.muted),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF4CAF50),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    'Device Connected',
-                    style: AppText.label.copyWith(
-                      color: const Color(0xFF4CAF50),
-                    ),
-                  ),
-                ],
-              ),
+              Text(email, style: AppText.muted),
             ],
           ),
         ),
@@ -142,118 +306,10 @@ class _StatsRow extends StatelessWidget {
       children: [
         StatCard(value: '99%', label: 'UPTIME'),
         SizedBox(width: AppSpacing.sm),
-        StatCard(value: '3', label: 'DEVICES'),
+        StatCard(value: '1', label: 'USER'),
         SizedBox(width: AppSpacing.sm),
-        StatCard(value: '24/7', label: 'MONITORING'),
+        StatCard(value: 'LOCAL', label: 'STORAGE'),
       ],
-    );
-  }
-}
-
-class _RecentWorkouts extends StatelessWidget {
-  const _RecentWorkouts();
-
-  static const _recent = [
-    ('Heart Rate Spike', 'Alert', '2h', 'ago'),
-    ('Device Sync', 'Status', '5h', 'ago'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: _recent
-          .map(
-            (w) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: WorkoutCard(
-                title: w.$1,
-                category: w.$2,
-                duration: w.$3,
-                calories: w.$4,
-                fullWidth: true,
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-}
-
-class _ConnectedDeviceCard extends StatelessWidget {
-  const _ConnectedDeviceCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.watch,
-              color: AppColors.accent,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'VITA Watch Pro',
-                  style: AppText.body,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF4CAF50),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      'Connected',
-                      style: AppText.muted.copyWith(
-                        color: const Color(0xFF4CAF50),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Icon(
-                Icons.battery_charging_full,
-                color: AppColors.accent,
-                size: 24,
-              ),
-              SizedBox(height: AppSpacing.xs),
-              Text(
-                '85%',
-                style: AppText.muted,
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }

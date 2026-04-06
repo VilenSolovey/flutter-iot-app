@@ -8,12 +8,20 @@ class AuthTextField extends StatelessWidget {
     this.hint = '',
     this.isPassword = false,
     this.keyboardType,
+    this.controller,
+    this.validator,
+    this.textInputAction,
+    this.onFieldSubmitted,
   });
 
   final String label;
   final String hint;
   final bool isPassword;
   final TextInputType? keyboardType;
+  final TextEditingController? controller;
+  final String? Function(String?)? validator;
+  final TextInputAction? textInputAction;
+  final void Function(String)? onFieldSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -22,9 +30,13 @@ class AuthTextField extends StatelessWidget {
       children: [
         Text(label.toUpperCase(), style: AppText.label),
         const SizedBox(height: AppSpacing.sm),
-        TextField(
+        TextFormField(
+          controller: controller,
           obscureText: isPassword,
           keyboardType: keyboardType,
+          validator: validator,
+          textInputAction: textInputAction,
+          onFieldSubmitted: onFieldSubmitted,
           style: AppText.body,
           decoration: InputDecoration(
             hintText: hint,

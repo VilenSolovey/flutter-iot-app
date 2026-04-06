@@ -4,13 +4,13 @@ import 'package:my_project/theme/app_theme.dart';
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     required this.label,
-    required this.onPressed,
+    this.onPressed,
     super.key,
     this.isOutlined = false,
   });
 
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool isOutlined;
 
   @override
