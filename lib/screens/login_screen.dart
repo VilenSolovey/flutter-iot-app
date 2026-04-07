@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_project/services/auth_service.dart';
+import 'package:my_project/services/connectivity_service.dart';
 import 'package:my_project/theme/app_theme.dart';
 import 'package:my_project/widgets/app_logo.dart';
 import 'package:my_project/widgets/auth_text_field.dart';
@@ -8,10 +9,12 @@ import 'package:my_project/widgets/primary_button.dart';
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
     required this.authService,
+    required this.connectivityService,
     super.key,
   });
 
   final AuthService authService;
+  final ConnectivityService connectivityService;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -33,6 +36,22 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) {
+      return;
+    }
+
+    final hasInternet =
+        await widget.connectivityService.hasInternetConnection();
+    if (!hasInternet) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Немає інтернету. Увійти можна лише після відновлення мережі.',
+          ),
+        ),
+      );
       return;
     }
 

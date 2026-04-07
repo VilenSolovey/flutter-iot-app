@@ -40,13 +40,16 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (_) => LoginScreen(
               authService: dependencies.authService,
+              connectivityService: dependencies.connectivityService,
             ),
         '/register': (_) => RegisterScreen(
               authService: dependencies.authService,
             ),
         '/home': (_) => HomeScreen(
               authService: dependencies.authService,
+              connectivityService: dependencies.connectivityService,
               healthRecordService: dependencies.healthRecordService,
+              mqttService: dependencies.mqttService,
             ),
         '/profile': (_) => ProfileScreen(
               authService: dependencies.authService,

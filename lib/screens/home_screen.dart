@@ -1,22 +1,34 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:my_project/domain/models/health_record.dart';
 import 'package:my_project/domain/models/user_profile.dart';
 import 'package:my_project/services/auth_service.dart';
+import 'package:my_project/services/connectivity_service.dart';
 import 'package:my_project/services/health_record_service.dart';
+import 'package:my_project/services/mqtt_service.dart';
 import 'package:my_project/theme/app_theme.dart';
-import 'package:my_project/widgets/iot_metric_card.dart';
+import 'package:my_project/widgets/empty_records_state.dart';
+import 'package:my_project/widgets/health_record_card.dart';
+import 'package:my_project/widgets/health_record_dialog.dart';
+import 'package:my_project/widgets/home_app_bar.dart';
+import 'package:my_project/widgets/home_iot_metrics_grid.dart';
+import 'package:my_project/widgets/mqtt_status_banner.dart';
 import 'package:my_project/widgets/section_header.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     required this.authService,
+    required this.connectivityService,
     required this.healthRecordService,
+    required this.mqttService,
     super.key,
   });
 
   final AuthService authService;
+  final ConnectivityService connectivityService;
   final HealthRecordService healthRecordService;
+  final MqttService mqttService;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -26,11 +38,57 @@ class _HomeScreenState extends State<HomeScreen> {
   UserProfile? _user;
   List<HealthRecord> _records = <HealthRecord>[];
   bool _isLoading = true;
+  bool _isOnline = true;
+  bool _isMqttConnected = false;
+  bool _isConnectingToMqtt = false;
+  String _heartRate = '--';
+  String _temperature = '--';
+  StreamSubscription<bool>? _connectionSubscription;
+  StreamSubscription<bool>? _mqttConnectionSubscription;
+  StreamSubscription<String>? _heartRateSubscription;
+  StreamSubscription<String>? _temperatureSubscription;
+  Timer? _mqttReconnectTimer;
 
   @override
   void initState() {
     super.initState();
+    _temperatureSubscription = widget.mqttService.temperatureStream.listen(
+      (value) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _temperature = value;
+        });
+      },
+    );
+    _heartRateSubscription = widget.mqttService.heartRateStream.listen(
+      (value) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _heartRate = value;
+        });
+      },
+    );
+    _mqttConnectionSubscription = widget.mqttService.connectionStream.listen(
+      _handleMqttConnectionChange,
+    );
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _connectionSubscription?.cancel();
+    _mqttConnectionSubscription?.cancel();
+    _heartRateSubscription?.cancel();
+    _temperatureSubscription?.cancel();
+    _mqttReconnectTimer?.cancel();
+    widget.mqttService.disconnect();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -50,111 +108,209 @@ class _HomeScreenState extends State<HomeScreen> {
       _records = records;
       _isLoading = false;
     });
+
+    await _initializeConnectivity();
   }
 
-  Future<void> _showRecordDialog({HealthRecord? record}) async {
-    final formKey = GlobalKey<FormState>();
-    final types = HealthRecordService.allowedMetrics.keys.toList();
-    var selectedType = record?.type ?? types.first;
-    final valueController = TextEditingController(text: record?.value ?? '');
-
-    final action = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              backgroundColor: AppColors.surface,
-              title: Text(
-                record == null ? 'Add Vital Sign' : 'Edit Vital Sign',
-                style: AppText.h2,
-              ),
-              content: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Metric Type', style: AppText.label),
-                    const SizedBox(height: AppSpacing.sm),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedType,
-                      dropdownColor: AppColors.card,
-                      style: AppText.body,
-                      items: types.map((t) {
-                        return DropdownMenuItem(
-                          value: t,
-                          child: Text(t),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setStateDialog(() {
-                            selectedType = val;
-                          });
-                        }
-                      },
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    TextFormField(
-                      controller: valueController,
-                      style: AppText.body,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Value',
-                        hintText: 'e.g. 75',
-                        suffixText:
-                            HealthRecordService.allowedMetrics[selectedType],
-                        suffixStyle: AppText.muted,
-                      ),
-                      validator: (value) =>
-                          widget.healthRecordService.validateValue(value ?? ''),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    final isValid = formKey.currentState?.validate() ?? false;
-                    if (!isValid) return;
-                    Navigator.pop(context, true);
-                  },
-                  child: Text(record == null ? 'Save' : 'Update'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (action != true) {
-      valueController.dispose();
+  Future<void> _initializeConnectivity() async {
+    final isOnline = await widget.connectivityService.hasInternetConnection();
+    if (!mounted) {
       return;
     }
 
-    final value = valueController.text;
+    setState(() {
+      _isOnline = isOnline;
+      if (!isOnline) {
+        _isMqttConnected = false;
+        _heartRate = '--';
+        _temperature = '--';
+      }
+    });
+
+    if (!isOnline) {
+      _showStatusMessage(
+        'Автовхід доступний, але зараз немає інтернету. MQTT тимчасово '
+        'недоступний.',
+      );
+      _connectionSubscription ??=
+          widget.connectivityService.connectionStream.listen(
+        _handleConnectivityChange,
+      );
+      return;
+    }
+
+    await _connectToMqtt(showFailureMessage: true);
+    _connectionSubscription ??= widget.connectivityService.connectionStream
+        .listen(_handleConnectivityChange);
+  }
+
+  Future<void> _handleConnectivityChange(bool isOnline) async {
+    if (!mounted || _isOnline == isOnline) {
+      return;
+    }
+
+    setState(() {
+      _isOnline = isOnline;
+      if (!isOnline) {
+        _isMqttConnected = false;
+        _heartRate = '--';
+        _temperature = '--';
+      }
+    });
+
+    if (!isOnline) {
+      _mqttReconnectTimer?.cancel();
+      widget.mqttService.disconnect();
+      _showStatusMessage('Зʼєднання з Інтернетом втрачено.');
+      return;
+    }
+
+    _showStatusMessage('Інтернет повернувся. Відновлюємо MQTT-зʼєднання.');
+    await _connectToMqtt(showFailureMessage: true);
+  }
+
+  Future<void> _connectToMqtt({
+    required bool showFailureMessage,
+  }) async {
+    if (_isConnectingToMqtt) {
+      return;
+    }
+
+    _isConnectingToMqtt = true;
+    final didConnect = await widget.mqttService.connect();
+    _isConnectingToMqtt = false;
+    if (!mounted) {
+      return;
+    }
+
+    if (!didConnect) {
+      setState(() {
+        _isMqttConnected = false;
+      });
+      if (showFailureMessage) {
+        _showStatusMessage('Не вдалося підключитися до MQTT брокера.');
+      }
+      _scheduleReconnect();
+      return;
+    }
+
+    final isSubscribed = await widget.mqttService.subscribeToSensors();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isMqttConnected = isSubscribed;
+    });
+
+    if (isSubscribed) {
+      _mqttReconnectTimer?.cancel();
+    }
+
+    if (!isSubscribed && showFailureMessage) {
+      _showStatusMessage(
+        'MQTT підключено, але підписатися на топік не вдалося.',
+      );
+      _scheduleReconnect();
+    }
+  }
+
+  void _handleMqttConnectionChange(bool isConnected) {
+    if (!mounted || _isMqttConnected == isConnected) {
+      return;
+    }
+
+    setState(() {
+      _isMqttConnected = isConnected;
+      if (!isConnected) {
+        _heartRate = '--';
+        _temperature = '--';
+      }
+    });
+
+    if (!isConnected && _isOnline) {
+      _showStatusMessage('MQTT брокер відключився.');
+      _scheduleReconnect();
+      return;
+    }
+
+    if (isConnected) {
+      _mqttReconnectTimer?.cancel();
+    }
+  }
+
+  void _scheduleReconnect() {
+    if (!_isOnline || _isMqttConnected) {
+      return;
+    }
+
+    _mqttReconnectTimer ??= Timer.periodic(
+      const Duration(seconds: 5),
+      (_) async {
+        if (!mounted || !_isOnline || _isMqttConnected) {
+          _mqttReconnectTimer?.cancel();
+          _mqttReconnectTimer = null;
+          return;
+        }
+
+        await _connectToMqtt(showFailureMessage: false);
+
+        if (_isMqttConnected) {
+          _mqttReconnectTimer?.cancel();
+          _mqttReconnectTimer = null;
+        }
+      },
+    );
+  }
+
+  @override
+  void deactivate() {
+    _mqttReconnectTimer?.cancel();
+    _mqttReconnectTimer = null;
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    if (_isOnline && !_isMqttConnected) {
+      _scheduleReconnect();
+    }
+  }
+
+  void _showStatusMessage(String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    });
+  }
+
+  Future<void> _showRecordDialog({HealthRecord? record}) async {
+    final result = await showHealthRecordDialog(
+      context,
+      healthRecordService: widget.healthRecordService,
+      record: record,
+    );
+
+    if (result == null) {
+      return;
+    }
 
     final updated = record == null
         ? await widget.healthRecordService.addRecord(
-            type: selectedType,
-            value: value,
+            type: result.type,
+            value: result.value,
           )
         : await widget.healthRecordService.updateRecord(
             id: record.id,
-            type: selectedType,
-            value: value,
+            type: result.type,
+            value: result.value,
           );
-
-    valueController.dispose();
 
     if (!mounted) return;
     setState(() {
@@ -197,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 : AppSpacing.lg;
             return CustomScrollView(
               slivers: [
-                _AppBar(
+                HomeAppBar(
                   hPad: hPad,
                   fullName: user.fullName,
                   email: user.email,
@@ -207,9 +363,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       const SizedBox(height: AppSpacing.sm),
+                      MqttStatusBanner(
+                        isOnline: _isOnline,
+                        isMqttConnected: _isMqttConnected,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
                       const SectionHeader(title: 'Dashboard'),
                       const SizedBox(height: AppSpacing.md),
-                      const _IotMetricsGrid(),
+                      HomeIotMetricsGrid(
+                        heartRate: _heartRate,
+                        isMqttConnected: _isMqttConnected,
+                        isOnline: _isOnline,
+                        temperature: _temperature,
+                        temperatureTopic: widget.mqttService.temperatureTopic,
+                      ),
                       const SizedBox(height: AppSpacing.xl),
                       SectionHeader(
                         title: 'Health Journal',
@@ -218,14 +385,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: AppSpacing.md),
                       if (_records.isEmpty)
-                        const _EmptyRecordsState()
+                        const EmptyRecordsState()
                       else
                         ..._records.map(
                           (record) => Padding(
                             padding: const EdgeInsets.only(
                               bottom: AppSpacing.sm,
                             ),
-                            child: _RecordCard(
+                            child: HealthRecordCard(
                               record: record,
                               onEdit: () => _showRecordDialog(record: record),
                               onDelete: () => _deleteRecord(record),
@@ -246,200 +413,6 @@ class _HomeScreenState extends State<HomeScreen> {
         onPressed: _showRecordDialog,
         backgroundColor: AppColors.accent,
         child: const Icon(Icons.add, color: AppColors.bg),
-      ),
-    );
-  }
-}
-
-class _AppBar extends StatelessWidget {
-  const _AppBar({
-    required this.hPad,
-    required this.fullName,
-    required this.email,
-  });
-
-  final double hPad;
-  final String fullName;
-  final String email;
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverPadding(
-      padding: EdgeInsets.fromLTRB(hPad, AppSpacing.lg, hPad, AppSpacing.md),
-      sliver: SliverToBoxAdapter(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(email, style: AppText.muted),
-                Text(fullName, style: AppText.h2),
-              ],
-            ),
-            GestureDetector(
-              onTap: () => Navigator.pushNamed(context, '/profile'),
-              child: const Hero(
-                tag: 'profile-avatar',
-                child: CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppColors.card,
-                  child: Icon(
-                    Icons.person,
-                    color: AppColors.secondary,
-                    size: 22,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _IotMetricsGrid extends StatelessWidget {
-  const _IotMetricsGrid();
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: AppSpacing.sm,
-      mainAxisSpacing: AppSpacing.sm,
-      childAspectRatio: 1.2,
-      children: const [
-        IotMetricCard(
-          icon: Icons.favorite,
-          label: 'Heart Rate',
-          value: '72',
-          unit: 'bpm',
-          color: Color(0xFFE91E63),
-          isPulsing: true,
-        ),
-        IotMetricCard(
-          icon: Icons.thermostat,
-          label: 'Temperature',
-          value: '36.6',
-          unit: '°C',
-          color: Color(0xFFFF9800),
-          delay: Duration(milliseconds: 100),
-        ),
-        IotMetricCard(
-          icon: Icons.air,
-          label: 'SpO2',
-          value: '98',
-          unit: '%',
-          color: Color(0xFF00BCD4),
-          delay: Duration(milliseconds: 200),
-        ),
-        IotMetricCard(
-          icon: Icons.directions_walk,
-          label: 'Steps',
-          value: '4200',
-          unit: 'steps',
-          color: Color(0xFF4CAF50),
-          delay: Duration(milliseconds: 300),
-        ),
-      ],
-    );
-  }
-}
-
-class _RecordCard extends StatelessWidget {
-  const _RecordCard({
-    required this.record,
-    required this.onEdit,
-    required this.onDelete,
-  });
-
-  final HealthRecord record;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-
-  IconData _getIconForType(String type) {
-    switch (type) {
-      case 'Water Intake':
-        return Icons.water_drop;
-      case 'Weight':
-        return Icons.monitor_weight;
-      case 'Blood Pressure':
-        return Icons.favorite;
-      case 'Blood Sugar':
-        return Icons.bloodtype;
-      case 'Sleep':
-        return Icons.bedtime;
-      case 'Calories':
-        return Icons.local_fire_department;
-      default:
-        return Icons.health_and_safety;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: AppColors.accent.withValues(alpha: 0.15),
-            child: Icon(_getIconForType(record.type), color: AppColors.accent),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(record.type, style: AppText.body),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  '${record.value} ${record.unit}',
-                  style: AppText.h2.copyWith(fontSize: 18),
-                ),
-                Text(
-                  DateFormat('MMM d, h:mm a').format(record.timestamp),
-                  style: AppText.muted.copyWith(fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: onEdit,
-            icon: const Icon(Icons.edit, color: AppColors.secondary),
-          ),
-          IconButton(
-            onPressed: onDelete,
-            icon: const Icon(Icons.delete_outline, color: AppColors.secondary),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyRecordsState extends StatelessWidget {
-  const _EmptyRecordsState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const Text(
-        'Натисни + щоб додати перший запис',
-        style: AppText.muted,
       ),
     );
   }
