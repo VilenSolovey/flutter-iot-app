@@ -17,102 +17,123 @@ Future<HealthRecordDialogResult?> showHealthRecordDialog(
   BuildContext context, {
   required HealthRecordService healthRecordService,
   HealthRecord? record,
-}) async {
-  final formKey = GlobalKey<FormState>();
-  final types = HealthRecordService.allowedMetrics.keys.toList();
-  var selectedType = record?.type ?? types.first;
-  final valueController = TextEditingController(text: record?.value ?? '');
-
-  final action = await showDialog<bool>(
+}) {
+  return showDialog<HealthRecordDialogResult>(
     context: context,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setStateDialog) {
-          return AlertDialog(
-            backgroundColor: AppColors.surface,
-            title: Text(
-              record == null ? 'Add Vital Sign' : 'Edit Vital Sign',
-              style: AppText.h2,
-            ),
-            content: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Metric Type', style: AppText.label),
-                  const SizedBox(height: AppSpacing.sm),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedType,
-                    dropdownColor: AppColors.card,
-                    style: AppText.body,
-                    items: types.map((type) {
-                      return DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setStateDialog(() {
-                          selectedType = value;
-                        });
-                      }
-                    },
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  TextFormField(
-                    controller: valueController,
-                    style: AppText.body,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: 'Value',
-                      hintText: 'e.g. 75',
-                      suffixText:
-                          HealthRecordService.allowedMetrics[selectedType],
-                      suffixStyle: AppText.muted,
-                    ),
-                    validator: (value) =>
-                        healthRecordService.validateValue(value ?? ''),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  final isValid = formKey.currentState?.validate() ?? false;
-                  if (!isValid) {
-                    return;
-                  }
-
-                  Navigator.pop(context, true);
-                },
-                child: Text(record == null ? 'Save' : 'Update'),
-              ),
-            ],
-          );
-        },
-      );
-    },
+    barrierDismissible: false,
+    builder: (_) => _HealthRecordDialog(
+      healthRecordService: healthRecordService,
+      record: record,
+    ),
   );
+}
 
-  if (action != true) {
-    valueController.dispose();
-    return null;
+class _HealthRecordDialog extends StatefulWidget {
+  const _HealthRecordDialog({
+    required this.healthRecordService,
+    this.record,
+  });
+
+  final HealthRecordService healthRecordService;
+  final HealthRecord? record;
+
+  @override
+  State<_HealthRecordDialog> createState() => _HealthRecordDialogState();
+}
+
+class _HealthRecordDialogState extends State<_HealthRecordDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _valueController;
+  late final List<String> _types;
+  late String _selectedType;
+
+  @override
+  void initState() {
+    super.initState();
+    _types = HealthRecordService.allowedMetrics.keys.toList();
+    _selectedType = widget.record?.type ?? _types.first;
+    _valueController = TextEditingController(text: widget.record?.value ?? '');
   }
 
-  final result = HealthRecordDialogResult(
-    type: selectedType,
-    value: valueController.text,
-  );
-  valueController.dispose();
-  return result;
+  @override
+  void dispose() {
+    _valueController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final isValid = _formKey.currentState?.validate() ?? false;
+    if (!isValid) return;
+    Navigator.pop(
+      context,
+      HealthRecordDialogResult(
+        type: _selectedType,
+        value: _valueController.text,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEditing = widget.record != null;
+    return AlertDialog(
+      backgroundColor: AppColors.surface,
+      title: Text(
+        isEditing ? 'Edit Vital Sign' : 'Add Vital Sign',
+        style: AppText.h2,
+      ),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Metric Type', style: AppText.label),
+            const SizedBox(height: AppSpacing.sm),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedType,
+              dropdownColor: AppColors.card,
+              style: AppText.body,
+              items: _types
+                  .map(
+                    (type) => DropdownMenuItem(value: type, child: Text(type)),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _selectedType = value);
+              },
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _valueController,
+              style: AppText.body,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Value',
+                hintText: 'e.g. 75',
+                suffixText: HealthRecordService.allowedMetrics[_selectedType],
+                suffixStyle: AppText.muted,
+              ),
+              validator: (value) =>
+                  widget.healthRecordService.validateValue(value ?? ''),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(isEditing ? 'Update' : 'Save'),
+        ),
+      ],
+    );
+  }
 }

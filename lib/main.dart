@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:my_project/app/app_dependencies.dart';
 import 'package:my_project/screens/home_screen.dart';
@@ -8,6 +9,7 @@ import 'package:my_project/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   final dependencies = await AppDependencies.create();
   final hasSession = await dependencies.authService.hasActiveSession();
 

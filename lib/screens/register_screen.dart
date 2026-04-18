@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:my_project/screens/auth/auth_page_scaffold.dart';
 import 'package:my_project/services/auth_service.dart';
 import 'package:my_project/theme/app_theme.dart';
-import 'package:my_project/widgets/app_logo.dart';
 import 'package:my_project/widgets/auth_text_field.dart';
 import 'package:my_project/widgets/primary_button.dart';
 
@@ -35,11 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _handleRegister() async {
-    final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) {
-      return;
-    }
-
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() {
       _isLoading = true;
     });
@@ -50,110 +46,86 @@ class _RegisterScreenState extends State<RegisterScreen> {
       password: _passwordController.text,
       confirmPassword: _confirmController.text,
     );
-
-    if (!mounted) {
-      return;
-    }
-
+    if (!mounted) return;
     setState(() {
       _isLoading = false;
     });
-
     if (result.isSuccess) {
       Navigator.pushReplacementNamed(context, '/home');
       return;
     }
+    _showMessage(result.message ?? 'Помилка реєстрації');
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(result.message ?? 'Помилка реєстрації'),
-      ),
-    );
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final hPad = constraints.maxWidth > 600
-                ? constraints.maxWidth * 0.2
-                : AppSpacing.lg;
-            return SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: hPad,
-                vertical: AppSpacing.lg,
+    return AuthPageScaffold(
+      title: 'Create\naccount.',
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AuthTextField(
+              label: 'Full Name',
+              hint: 'John Doe',
+              controller: _nameController,
+              textInputAction: TextInputAction.next,
+              validator: (value) =>
+                  widget.authService.validateFullName(value?.trim() ?? ''),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AuthTextField(
+              label: 'Email',
+              hint: 'you@example.com',
+              keyboardType: TextInputType.emailAddress,
+              controller: _emailController,
+              textInputAction: TextInputAction.next,
+              validator: (value) =>
+                  widget.authService.validateEmail(value?.trim() ?? ''),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AuthTextField(
+              label: 'Password',
+              hint: '••••••••',
+              isPassword: true,
+              controller: _passwordController,
+              textInputAction: TextInputAction.next,
+              validator: (value) =>
+                  widget.authService.validatePassword(value?.trim() ?? ''),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AuthTextField(
+              label: 'Confirm Password',
+              hint: '••••••••',
+              isPassword: true,
+              controller: _confirmController,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _handleRegister(),
+              validator: (value) => widget.authService.validateConfirmPassword(
+                _passwordController.text,
+                value?.trim() ?? '',
               ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: AppSpacing.xl),
-                    const AppLogo(),
-                    const SizedBox(height: AppSpacing.xxl),
-                    const Text('Create\naccount.', style: AppText.h1),
-                    const SizedBox(height: AppSpacing.xl),
-                    AuthTextField(
-                      label: 'Full Name',
-                      hint: 'John Doe',
-                      controller: _nameController,
-                      textInputAction: TextInputAction.next,
-                      validator: (value) => widget.authService
-                          .validateFullName(value?.trim() ?? ''),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    AuthTextField(
-                      label: 'Email',
-                      hint: 'you@example.com',
-                      keyboardType: TextInputType.emailAddress,
-                      controller: _emailController,
-                      textInputAction: TextInputAction.next,
-                      validator: (value) =>
-                          widget.authService.validateEmail(value?.trim() ?? ''),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    AuthTextField(
-                      label: 'Password',
-                      hint: '••••••••',
-                      isPassword: true,
-                      controller: _passwordController,
-                      textInputAction: TextInputAction.next,
-                      validator: (value) => widget.authService
-                          .validatePassword(value?.trim() ?? ''),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    AuthTextField(
-                      label: 'Confirm Password',
-                      hint: '••••••••',
-                      isPassword: true,
-                      controller: _confirmController,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _handleRegister(),
-                      validator: (value) =>
-                          widget.authService.validateConfirmPassword(
-                        _passwordController.text,
-                        value?.trim() ?? '',
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    PrimaryButton(
-                      label: _isLoading ? 'Loading...' : 'Sign Up',
-                      onPressed: _isLoading ? null : _handleRegister,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    PrimaryButton(
-                      label: 'Already have an account',
-                      isOutlined: true,
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                  ],
-                ),
-              ),
-            );
-          },
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            PrimaryButton(
+              label: _isLoading ? 'Loading...' : 'Sign Up',
+              onPressed: _isLoading ? null : _handleRegister,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            PrimaryButton(
+              label: 'Already have an account',
+              isOutlined: true,
+              onPressed: () => Navigator.pop(context),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
         ),
       ),
     );

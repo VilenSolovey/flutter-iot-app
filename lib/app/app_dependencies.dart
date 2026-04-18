@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:my_project/data/repositories/firestore_health_record_repository.dart';
 import 'package:my_project/data/repositories/local_auth_repository.dart';
 import 'package:my_project/data/repositories/local_health_record_repository.dart';
 import 'package:my_project/data/storage/shared_prefs_storage.dart';
@@ -24,7 +26,11 @@ class AppDependencies {
     final prefs = await SharedPreferences.getInstance();
     final storage = SharedPrefsStorage(prefs);
     final authRepository = LocalAuthRepository(storage);
-    final recordRepository = LocalHealthRecordRepository(storage);
+    final localRecordRepository = LocalHealthRecordRepository(storage);
+    final recordRepository = FirestoreHealthRecordRepository(
+      firestore: FirebaseFirestore.instance,
+      localRepository: localRecordRepository,
+    );
 
     return AppDependencies(
       authService: AuthService(authRepository),
