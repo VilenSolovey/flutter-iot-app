@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_project/theme/app_theme.dart';
 
-class IotMetricCard extends StatelessWidget {
+class IotMetricCard extends StatefulWidget {
   const IotMetricCard({
     required this.icon,
     required this.label,
@@ -22,83 +22,109 @@ class IotMetricCard extends StatelessWidget {
   final Duration delay;
 
   @override
+  State<IotMetricCard> createState() => _IotMetricCardState();
+}
+
+class _IotMetricCardState extends State<IotMetricCard> {
+  var _isVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startEntranceAnimation();
+  }
+
+  Future<void> _startEntranceAnimation() async {
+    await Future<void>.delayed(widget.delay);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isVisible = true;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return FutureBuilder<void>(
-      future: Future<void>.delayed(delay),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const SizedBox.shrink();
-        }
-        return TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0, end: 1),
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeOutCubic,
-          builder: (context, value, child) {
-            return Transform.translate(
-              offset: Offset(0, 20 * (1 - value)),
-              child: Opacity(
-                opacity: value,
-                child: child,
-              ),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    if (isPulsing)
-                      _PulsingIcon(
-                        icon: icon,
-                        color: color ?? AppColors.accent,
-                      )
-                    else
-                      Icon(
-                        icon,
-                        color: color ?? AppColors.accent,
-                        size: 24,
-                      ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: AppText.muted,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      value,
-                      style: AppText.h1.copyWith(
-                        color: color ?? AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        unit,
-                        style: AppText.muted.copyWith(fontSize: 14),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: _isVisible ? 1 : 0),
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(
+            opacity: value,
+            child: child,
           ),
         );
       },
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (widget.isPulsing)
+                  _PulsingIcon(
+                    icon: widget.icon,
+                    color: widget.color ?? AppColors.accent,
+                  )
+                else
+                  Icon(
+                    widget.icon,
+                    color: widget.color ?? AppColors.accent,
+                    size: 24,
+                  ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    widget.label,
+                    style: AppText.muted,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    );
+                  },
+                  child: Text(
+                    widget.value,
+                    key: ValueKey(widget.value),
+                    style: AppText.h1.copyWith(
+                      color: widget.color ?? AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    widget.unit,
+                    style: AppText.muted.copyWith(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
