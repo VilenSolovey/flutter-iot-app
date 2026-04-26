@@ -1,5 +1,6 @@
 import 'package:my_project/domain/models/user_profile.dart';
 import 'package:my_project/domain/repositories/auth_repository.dart';
+import 'package:my_project/services/auth_validators.dart';
 
 class AuthResult {
   const AuthResult({
@@ -14,59 +15,20 @@ class AuthResult {
 }
 
 class AuthService {
-  AuthService(this._repository);
+  AuthService(this._repository, {AuthValidators? validators})
+      : _validators = validators ?? const AuthValidators();
 
   final AuthRepository _repository;
+  final AuthValidators _validators;
 
-  String? validateFullName(String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) {
-      return 'Введіть імʼя';
-    }
-    final hasOnlyLetters =
-        RegExp(r'^[A-Za-zА-Яа-яІіЇїЄєҐґ\s\-]+$').hasMatch(trimmed);
-    if (!hasOnlyLetters) {
-      return 'Імʼя не має містити цифри чи спецсимволи';
-    }
-    if (trimmed.length < 2) {
-      return 'Імʼя має містити мінімум 2 символи';
-    }
-    return null;
-  }
+  String? validateFullName(String value) => _validators.fullName(value);
 
-  String? validateEmail(String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) {
-      return 'Введіть email';
-    }
-    final isValid = RegExp(
-      r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
-    ).hasMatch(trimmed);
-    if (!isValid) {
-      return 'Некоректний email';
-    }
-    return null;
-  }
+  String? validateEmail(String value) => _validators.email(value);
 
-  String? validatePassword(String value) {
-    if (value.isEmpty) {
-      return 'Введіть пароль';
-    }
-    if (value.length < 6) {
-      return 'Пароль має бути не менше 6 символів';
-    }
-    return null;
-  }
+  String? validatePassword(String value) => _validators.password(value);
 
-  String? validateConfirmPassword(String password, String confirmPassword) {
-    if (confirmPassword.isEmpty) {
-      return 'Підтвердіть пароль';
-    }
-    if (password != confirmPassword) {
-      return 'Паролі не співпадають';
-    }
-    return null;
-  }
+  String? validateConfirmPassword(String password, String confirmPassword) =>
+      _validators.confirmPassword(password, confirmPassword);
 
   Future<AuthResult> register({
     required String fullName,

@@ -31,9 +31,8 @@ class MqttService {
   Stream<String> get heartRateStream => _heartRateController.stream;
   Stream<String> get temperatureStream => _temperatureController.stream;
 
-  bool get isConnected {
-    return _client?.connectionStatus?.state == MqttConnectionState.connected;
-  }
+  bool get isConnected =>
+      _client?.connectionStatus?.state == MqttConnectionState.connected;
 
   Future<bool> connect() async {
     if (isConnected) {
@@ -109,9 +108,7 @@ class MqttService {
     await _temperatureController.close();
   }
 
-  void _handleConnected() {
-    _emitConnectionState(true);
-  }
+  void _handleConnected() => _emitConnectionState(true);
 
   void _handleDisconnected() {
     _client = null;
