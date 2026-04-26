@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:my_project/theme/app_theme.dart';
+import 'package:my_project/widgets/pulsing_icon.dart';
 
-class IotMetricCard extends StatefulWidget {
+class IotMetricCard extends StatelessWidget {
   const IotMetricCard({
     required this.icon,
     required this.label,
@@ -22,34 +23,10 @@ class IotMetricCard extends StatefulWidget {
   final Duration delay;
 
   @override
-  State<IotMetricCard> createState() => _IotMetricCardState();
-}
-
-class _IotMetricCardState extends State<IotMetricCard> {
-  var _isVisible = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _startEntranceAnimation();
-  }
-
-  Future<void> _startEntranceAnimation() async {
-    await Future<void>.delayed(widget.delay);
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isVisible = true;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: _isVisible ? 1 : 0),
-      duration: const Duration(milliseconds: 500),
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 500 + delay.inMilliseconds),
       curve: Curves.easeOutCubic,
       builder: (context, value, child) {
         return Transform.translate(
@@ -71,21 +48,21 @@ class _IotMetricCardState extends State<IotMetricCard> {
           children: [
             Row(
               children: [
-                if (widget.isPulsing)
-                  _PulsingIcon(
-                    icon: widget.icon,
-                    color: widget.color ?? AppColors.accent,
+                if (isPulsing)
+                  PulsingIcon(
+                    icon: icon,
+                    color: color ?? AppColors.accent,
                   )
                 else
                   Icon(
-                    widget.icon,
-                    color: widget.color ?? AppColors.accent,
+                    icon,
+                    color: color ?? AppColors.accent,
                     size: 24,
                   ),
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
-                    widget.label,
+                    label,
                     style: AppText.muted,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -105,10 +82,10 @@ class _IotMetricCardState extends State<IotMetricCard> {
                     );
                   },
                   child: Text(
-                    widget.value,
-                    key: ValueKey(widget.value),
+                    value,
+                    key: ValueKey(value),
                     style: AppText.h1.copyWith(
-                      color: widget.color ?? AppColors.primary,
+                      color: color ?? AppColors.primary,
                     ),
                   ),
                 ),
@@ -116,7 +93,7 @@ class _IotMetricCardState extends State<IotMetricCard> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Text(
-                    widget.unit,
+                    unit,
                     style: AppText.muted.copyWith(fontSize: 14),
                   ),
                 ),
@@ -124,53 +101,6 @@ class _IotMetricCardState extends State<IotMetricCard> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _PulsingIcon extends StatefulWidget {
-  const _PulsingIcon({required this.icon, required this.color});
-
-  final IconData icon;
-  final Color color;
-
-  @override
-  State<_PulsingIcon> createState() => _PulsingIconState();
-}
-
-class _PulsingIconState extends State<_PulsingIcon>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _animation = Tween<double>(begin: 0.8, end: 1.2).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _animation,
-      child: Icon(
-        widget.icon,
-        color: widget.color,
-        size: 24,
       ),
     );
   }

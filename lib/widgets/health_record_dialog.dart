@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:my_project/domain/models/health_record.dart';
-import 'package:my_project/services/health_record_service.dart';
 import 'package:my_project/theme/app_theme.dart';
 
 class HealthRecordDialogResult {
@@ -15,14 +14,16 @@ class HealthRecordDialogResult {
 
 Future<HealthRecordDialogResult?> showHealthRecordDialog(
   BuildContext context, {
-  required HealthRecordService healthRecordService,
+  required Map<String, String> allowedMetrics,
+  required String? Function(String value) validateValue,
   HealthRecord? record,
 }) {
   return showDialog<HealthRecordDialogResult>(
     context: context,
     barrierDismissible: false,
     builder: (_) => _HealthRecordDialog(
-      healthRecordService: healthRecordService,
+      allowedMetrics: allowedMetrics,
+      validateValue: validateValue,
       record: record,
     ),
   );
@@ -30,11 +31,13 @@ Future<HealthRecordDialogResult?> showHealthRecordDialog(
 
 class _HealthRecordDialog extends StatefulWidget {
   const _HealthRecordDialog({
-    required this.healthRecordService,
+    required this.allowedMetrics,
+    required this.validateValue,
     this.record,
   });
 
-  final HealthRecordService healthRecordService;
+  final Map<String, String> allowedMetrics;
+  final String? Function(String value) validateValue;
   final HealthRecord? record;
 
   @override
@@ -50,7 +53,7 @@ class _HealthRecordDialogState extends State<_HealthRecordDialog> {
   @override
   void initState() {
     super.initState();
-    _types = HealthRecordService.allowedMetrics.keys.toList();
+    _types = widget.allowedMetrics.keys.toList();
     _selectedType = widget.record?.type ?? _types.first;
     _valueController = TextEditingController(text: widget.record?.value ?? '');
   }
@@ -115,11 +118,10 @@ class _HealthRecordDialogState extends State<_HealthRecordDialog> {
               decoration: InputDecoration(
                 labelText: 'Value',
                 hintText: 'e.g. 75',
-                suffixText: HealthRecordService.allowedMetrics[_selectedType],
+                suffixText: widget.allowedMetrics[_selectedType],
                 suffixStyle: AppText.muted,
               ),
-              validator: (value) =>
-                  widget.healthRecordService.validateValue(value ?? ''),
+              validator: (value) => widget.validateValue(value ?? ''),
             ),
           ],
         ),

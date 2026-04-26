@@ -37,6 +37,7 @@ dependencies:
   connectivity_plus: ^6.1.5
   cupertino_icons: ^1.0.8
   firebase_core: ^3.15.2
+  flutter_bloc: ^9.1.1
   intl: any
   mqtt_client: ^10.5.1
   shared_preferences: ^2.5.4
