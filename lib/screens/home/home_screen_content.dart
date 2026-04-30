@@ -21,6 +21,7 @@ class HomeScreenContent extends StatelessWidget {
     required this.onAddRecord,
     required this.onEditRecord,
     required this.onDeleteRecord,
+    required this.onSecretAction,
     super.key,
   });
 
@@ -34,6 +35,7 @@ class HomeScreenContent extends StatelessWidget {
   final VoidCallback onAddRecord;
   final ValueChanged<HealthRecord> onEditRecord;
   final ValueChanged<HealthRecord> onDeleteRecord;
+  final VoidCallback onSecretAction;
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +46,12 @@ class HomeScreenContent extends StatelessWidget {
             : AppSpacing.lg;
         return CustomScrollView(
           slivers: [
-            HomeAppBar(hPad: hPad, fullName: user.fullName, email: user.email),
+            HomeAppBar(
+              hPad: hPad,
+              fullName: user.fullName,
+              email: user.email,
+              onSecretAction: onSecretAction,
+            ),
             SliverPadding(
               padding: EdgeInsets.symmetric(horizontal: hPad),
               sliver: SliverList.list(

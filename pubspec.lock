@@ -368,6 +368,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.5+1"
+  secret_flashlight_plugin:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: main
+      resolved-ref: b13a55973f8593772de7e927b984d8a0fc3ac485
+      url: "https://github.com/VilenSolovey/flutter-flashlight-plugin.git"
+    source: git
+    version: "0.0.1"
   shared_preferences:
     dependency: "direct main"
     description:
