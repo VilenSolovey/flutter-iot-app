@@ -6,12 +6,14 @@ class HomeAppBar extends StatelessWidget {
     required this.hPad,
     required this.fullName,
     required this.email,
+    required this.onSecretAction,
     super.key,
   });
 
   final double hPad;
   final String fullName;
   final String email;
+  final VoidCallback onSecretAction;
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +32,7 @@ class HomeAppBar extends StatelessWidget {
             ),
             GestureDetector(
               onTap: () => Navigator.pushNamed(context, '/profile'),
+              onLongPress: onSecretAction,
               child: const Hero(
                 tag: 'profile-avatar',
                 child: CircleAvatar(
