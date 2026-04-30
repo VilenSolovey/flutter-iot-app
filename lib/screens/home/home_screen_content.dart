@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_project/domain/models/health_record.dart';
 import 'package:my_project/domain/models/user_profile.dart';
-import 'package:my_project/services/mqtt_service.dart';
 import 'package:my_project/theme/app_theme.dart';
 import 'package:my_project/widgets/empty_records_state.dart';
 import 'package:my_project/widgets/health_record_card.dart';
@@ -13,12 +12,12 @@ import 'package:my_project/widgets/section_header.dart';
 class HomeScreenContent extends StatelessWidget {
   const HomeScreenContent({
     required this.user,
-    required this.recordsFuture,
+    required this.records,
     required this.isOnline,
     required this.isMqttConnected,
     required this.heartRate,
     required this.temperature,
-    required this.mqttService,
+    required this.temperatureTopic,
     required this.onAddRecord,
     required this.onEditRecord,
     required this.onDeleteRecord,
@@ -26,12 +25,12 @@ class HomeScreenContent extends StatelessWidget {
   });
 
   final UserProfile user;
-  final Future<List<HealthRecord>> recordsFuture;
+  final List<HealthRecord> records;
   final bool isOnline;
   final bool isMqttConnected;
   final String heartRate;
   final String temperature;
-  final MqttService mqttService;
+  final String temperatureTopic;
   final VoidCallback onAddRecord;
   final ValueChanged<HealthRecord> onEditRecord;
   final ValueChanged<HealthRecord> onDeleteRecord;
@@ -63,7 +62,7 @@ class HomeScreenContent extends StatelessWidget {
                     isMqttConnected: isMqttConnected,
                     isOnline: isOnline,
                     temperature: temperature,
-                    temperatureTopic: mqttService.temperatureTopic,
+                    temperatureTopic: temperatureTopic,
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   SectionHeader(
@@ -72,34 +71,25 @@ class HomeScreenContent extends StatelessWidget {
                     onAction: onAddRecord,
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  FutureBuilder<List<HealthRecord>>(
-                    future: recordsFuture,
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      final records = snapshot.data ?? <HealthRecord>[];
-                      if (records.isEmpty) {
-                        return const EmptyRecordsState();
-                      }
-                      return Column(
-                        children: records
-                            .map(
-                              (record) => Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: AppSpacing.sm,
-                                ),
-                                child: HealthRecordCard(
-                                  record: record,
-                                  onEdit: () => onEditRecord(record),
-                                  onDelete: () => onDeleteRecord(record),
-                                ),
+                  if (records.isEmpty)
+                    const EmptyRecordsState()
+                  else
+                    Column(
+                      children: records
+                          .map(
+                            (record) => Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: AppSpacing.sm,
                               ),
-                            )
-                            .toList(),
-                      );
-                    },
-                  ),
+                              child: HealthRecordCard(
+                                record: record,
+                                onEdit: () => onEditRecord(record),
+                                onDelete: () => onDeleteRecord(record),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
                   const SizedBox(height: AppSpacing.xl),
                 ],
               ),
